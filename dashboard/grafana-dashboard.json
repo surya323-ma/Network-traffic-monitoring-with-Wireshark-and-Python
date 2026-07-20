@@ -1,0 +1,51 @@
+{
+  "title": "Home Bandwidth Monitor",
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "piechart",
+      "title": "Data Usage by Device (last 1h)",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "query": "from(bucket: \"bandwidth\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"bandwidth_usage\")\n  |> filter(fn: (r) => r._field == \"bytes\")\n  |> group(columns: [\"device_name\"])\n  |> sum()\n  |> group()",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Live Data Rate (bytes/sec) per Device",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "query": "from(bucket: \"bandwidth\")\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"bandwidth_usage\")\n  |> filter(fn: (r) => r._field == \"bytes_per_sec\")\n  |> group(columns: [\"device_name\"])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "Bps" }
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Top Devices - Total Data Today",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 10 },
+      "targets": [
+        {
+          "query": "from(bucket: \"bandwidth\")\n  |> range(start: -24h)\n  |> filter(fn: (r) => r._measurement == \"bandwidth_usage\")\n  |> filter(fn: (r) => r._field == \"bytes\")\n  |> group(columns: [\"device_name\"])\n  |> sum()\n  |> group()\n  |> sort(columns: [\"_value\"], desc: true)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" }
+      }
+    }
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s"
+}
