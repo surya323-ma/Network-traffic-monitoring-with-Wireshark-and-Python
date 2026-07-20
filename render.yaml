@@ -1,0 +1,56 @@
+# Render Blueprint - deploys the dashboard backend (InfluxDB + Grafana)
+# so you can view your bandwidth dashboard from anywhere.
+#
+# IMPORTANT: The "capture" agent (capture/bandwidth_monitor.py) is NOT
+# included here on purpose. Render's containers are not on your home
+# Wi-Fi network and cannot sniff your LAN's packets - that agent must
+# run on a machine physically on your home network (PC, laptop, or a
+# Raspberry Pi left running). This blueprint only hosts the storage +
+# visualization layer that the local agent sends data to.
+#
+# Deploy: push this repo to GitHub, then in Render click
+# New -> Blueprint -> select this repo.
+#
+# Note: persistent disks require a paid Render instance type
+# (the Starter/Free tier does not support attached disks).
+
+services:
+  - type: web
+    name: bandwidth-influxdb
+    runtime: image
+    image:
+      url: docker.io/library/influxdb:2.7
+    plan: starter
+    envVars:
+      - key: DOCKER_INFLUXDB_INIT_MODE
+        value: setup
+      - key: DOCKER_INFLUXDB_INIT_USERNAME
+        sync: false
+      - key: DOCKER_INFLUXDB_INIT_PASSWORD
+        sync: false
+      - key: DOCKER_INFLUXDB_INIT_ORG
+        value: home
+      - key: DOCKER_INFLUXDB_INIT_BUCKET
+        value: bandwidth
+      - key: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+        sync: false
+    disk:
+      name: influxdb-data
+      mountPath: /var/lib/influxdb2
+      sizeGB: 1
+
+  - type: web
+    name: bandwidth-grafana
+    runtime: image
+    image:
+      url: docker.io/grafana/grafana:10.4.2
+    plan: starter
+    envVars:
+      - key: GF_SECURITY_ADMIN_USER
+        sync: false
+      - key: GF_SECURITY_ADMIN_PASSWORD
+        sync: false
+    disk:
+      name: grafana-data
+      mountPath: /var/lib/grafana
+      sizeGB: 1

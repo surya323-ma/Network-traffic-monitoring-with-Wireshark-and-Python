@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  influxdb:
+    image: influxdb:2.7
+    container_name: bandwidth-influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUX_ADMIN_USER:-admin}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUX_ADMIN_PASSWORD:-changeme123}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUX_ORG:-home}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUX_BUCKET:-bandwidth}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN:-my-super-secret-token}
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: bandwidth-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./dashboard:/etc/grafana/provisioning/dashboards-json
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+
+  # Capture agent - ONLY works when the host machine is actually on your
+  # home LAN. Do not run this service on Render/cloud; run it locally,
+  # e.g. `docker compose up capture` on a Raspberry Pi at home.
+  capture:
+    build: ./capture
+    container_name: bandwidth-capture
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - INFLUX_URL=${INFLUX_URL:-http://localhost:8086}
+      - INFLUX_TOKEN=${INFLUX_TOKEN:-my-super-secret-token}
+      - INFLUX_ORG=${INFLUX_ORG:-home}
+      - INFLUX_BUCKET=${INFLUX_BUCKET:-bandwidth}
+      - CAPTURE_IFACE=${CAPTURE_IFACE:-}
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+    profiles:
+      - local-only
+
+volumes:
+  influxdb-data:
+  grafana-data:
