@@ -1,0 +1,2 @@
+scapy>=2.5.0
+influxdb-client>=1.40.0
